@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Referral Tracker | Developer API</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .step { margin-bottom: 2rem; position: relative; padding-top: 1.5rem; }
+        .step::before {
+            content: attr(data-step);
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--primary);
+            color: #fff;
+            width: 25px; height: 25px;
+            border-radius: 50%; text-align: center; line-height: 25px;
+            font-size: 0.8rem; font-weight: bold;
+        }
+        .code-container { position: relative; margin-top: 1rem; }
+        .sidebar { background: var(--bg-card); padding: 1.5rem; border-radius: 1rem; position: sticky; top: 2rem; }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    
+    <div class="container">
+        <header>
+            <h1 class="title">RefChain API</h1>
+            <p class="subtitle">The Universal Tracking Engine for Modern Apps & Games.</p>
+        </header>
+
+        <div class="grid">
+            <!-- Left: Registration & Status -->
+            <div>
+                <div class="card">
+                    <h2>🚀 Register Your App</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Get your API key to start tracking referrals in minutes.</p>
+                    <form id="regForm">
+                        <div class="form-group">
+                            <label>Application Name</label>
+                            <input type="text" id="appName" placeholder="e.g. My Awesome Game" required>
+                        </div>
+                        <button type="submit" class="btn">Generate API Key</button>
+                    </form>
+                    
+                    <div id="apiKeyResult" style="display:none; margin-top: 2rem; background: rgba(0,255,100,0.1); padding: 1rem; border-radius: 0.8rem; border: 1px solid rgba(0,255,100,0.3);">
+                        <p style="color: #00ff66; font-size: 0.9rem;">Success! Save your API Key safely:</p>
+                        <code id="apiKeyVal" style="font-size: 1.2rem; color: #fff;"></code>
+                        <div style="margin-top: 10px; font-size: 0.8rem; color: #aaa;">App ID: <span id="appIdVal"></span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2 style="margin:0">📂 My Apps</h2>
+                        <button id="refreshApps" class="btn-small">Refresh</button>
+                    </div>
+                    <div id="appsList" class="app-grid">
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">No apps found. Register one above!</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>🌳 Referral Tree</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem;">Visualize your user branches in real-time.</p>
+                    <input type="text" id="treeAppId" placeholder="Enter App ID to see Tree" style="margin-bottom: 1rem;">
+                    <button id="loadTree" class="btn" style="background: var(--glass); border: 1px solid var(--primary);">View Tree</button>
+                    <div id="treeContainer" class="tree-viz" style="margin-top: 2rem;"></div>
+                </div>
+            </div>
+
+            <!-- Right: Integration Guide -->
+            <div>
+                <div class="card">
+                    <h2>🛠️ Integration Guide</h2>
+                    <div class="step" data-step="1">
+                        <h3>Initialize User & Get Code</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">Call this when a user logs in to get their unique referral code.</p>
+                        <div class="code-container">
+                            <button class="copy-btn" onclick="copy(this)">Copy</button>
+<pre><code>curl -X POST "/api/users/generate-code" \
+  -H "X-API-KEY: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"external_user_id": "user_123"}'</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="step" data-step="2">
+                        <h3>Track Successful Referral</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">Call this on the signup/login logic of the new user (referee).</p>
+                        <div class="code-container">
+                            <button class="copy-btn" onclick="copy(this)">Copy</button>
+<pre><code>curl -X POST "/api/referrals/track" \
+  -H "X-API-KEY: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "referee_id": "new_user_456",
+    "referral_code": "ABC-789"
+  }'</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="step" data-step="3">
+                        <h3>Fetch Analytics</h3>
+                        <div class="code-container">
+                            <button class="copy-btn" onclick="copy(this)">Copy</button>
+<pre><code>curl "/api/apps/1/tree"</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Copy function
+        function copy(btn) {
+            const pre = btn.nextElementSibling;
+            navigator.clipboard.writeText(pre.innerText);
+            btn.innerText = "Copied!";
+            setTimeout(() => btn.innerText = "Copy", 1000);
+        }
+
+        // Registration
+        document.getElementById('regForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('appName').value;
+            const res = await fetch('/api/apps', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name})
+            });
+            const data = await res.json();
+            document.getElementById('apiKeyResult').style.display = 'block';
+            document.getElementById('apiKeyVal').innerText = data.api_key;
+            document.getElementById('appIdVal').innerText = data.id;
+            loadApps(); // Refresh list
+        };
+
+        // Load Apps List
+        async function loadApps() {
+            const res = await fetch('/api/apps');
+            const apps = await res.json();
+            const list = document.getElementById('appsList');
+            if(apps.length === 0) return;
+            
+            list.innerHTML = '';
+            apps.forEach(app => {
+                const card = document.createElement('div');
+                card.className = 'mini-card';
+                card.innerHTML = `
+                    <span class="id-badge">ID: ${app.id}</span>
+                    <h4>${app.name}</h4>
+                    <div class="meta" title="${app.api_key}">Key: ${app.api_key.substring(0,8)}...</div>
+                    <button class="btn-small" onclick="viewTree(${app.id})">View Tree</button>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        window.viewTree = (id) => {
+            document.getElementById('treeAppId').value = id;
+            document.getElementById('loadTree').click();
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        };
+
+        document.getElementById('refreshApps').onclick = loadApps;
+        window.onload = loadApps;
+
+        // Tree Visualization
+        document.getElementById('loadTree').onclick = async () => {
+            const appId = document.getElementById('treeAppId').value;
+            if(!appId) return alert("Enter App ID");
+            const res = await fetch(`/api/apps/${appId}/tree`);
+            const data = await res.json();
+            
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = `<h3 style="margin-bottom:1rem">Hierarchy for ${data.app_name}</h3>`;
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'tree-wrapper';
+            const treeRoot = document.createElement('div');
+            treeRoot.className = 'tree';
+            
+            const rootUl = document.createElement('ul');
+
+            function renderNode(user) {
+                const li = document.createElement('li');
+                const initial = user.external_user_id.charAt(0).toUpperCase();
+                li.innerHTML = `
+                    <div class="node-box">
+                        <div class="avatar">${initial}</div>
+                        <span class="node-name">${user.external_user_id}</span>
+                        <span class="node-code">${user.referral_code}</span>
+                    </div>
+                `;
+                
+                if(user.children && user.children.length > 0) {
+                    const childUl = document.createElement('ul');
+                    user.children.forEach(child => {
+                        childUl.appendChild(renderNode(child));
+                    });
+                    li.appendChild(childUl);
+                }
+                return li;
+            }
+
+            data.root_users.forEach(root => {
+                rootUl.appendChild(renderNode(root));
+            });
+
+            treeRoot.appendChild(rootUl);
+            wrapper.appendChild(treeRoot);
+            container.appendChild(wrapper);
+        };
+    </script>
+</body>
+</html>
